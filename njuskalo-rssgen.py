@@ -98,9 +98,9 @@ if doc is not None:
             D = {
                 'name': f"oglas_{i}_{int(time.time())}",
                 'href': f"http://www.njuskalo.hr{link['href']}" if link['href'].startswith('/') else link['href'],
-                'title': link['text'].encode('utf-8') if link['text'] else 'Bez naslova'.encode('utf-8'),
-                'text': 'Opis nije dostupan'.encode('utf-8'),
-                'price': 'Cijena na upit'.encode('utf-8'),
+                'title': link['text'] if link['text'] else 'Bez naslova',
+                'text': 'Opis nije dostupan',
+                'price': 'Cijena na upit',
                 'time': time.time(),
                 'datetime': datetime.datetime.now()
             }
@@ -116,27 +116,27 @@ if doc is not None:
                         if tmp:
                             D['name'] = tmp[0].attrib.get('name', '')
                             D['href'] = "http://www.njuskalo.hr/" + tmp[0].attrib.get('href', '')
-                            D['title'] = tmp[0].text.encode('utf-8') if tmp[0].text else 'Nema naslova'.encode('utf-8')
+                            D['title'] = tmp[0].text if tmp[0].text else 'Nema naslova'
                             D['time'] = time.time()
                             D['datetime'] = datetime.datetime.now()
                             
                     if i.attrib.get('class') == 'entity-description':
                         tmp = i.getchildren()
                         if tmp and tmp[0].text:
-                            D['text'] = tmp[0].text.encode('utf-8').strip()
+                            D['text'] = tmp[0].text.strip()
                         else:
-                            D['text'] = 'Nema opisa'.encode('utf-8')
+                            D['text'] = 'Nema opisa'
                             
                     if i.attrib.get('class') == 'entity-prices':
                         tmp = i.getchildren()
                         if tmp and tmp[0].getchildren():
                             price_elem = tmp[0].getchildren()[0].getchildren()
                             if price_elem:
-                                D['price'] = price_elem[0].text.encode('utf-8').strip() if price_elem[0].text else 'Cijena na upit'.encode('utf-8')
+                                D['price'] = price_elem[0].text.strip() if price_elem[0].text else 'Cijena na upit'
                             else:
-                                D['price'] = 'Cijena na upit'.encode('utf-8')
+                                D['price'] = 'Cijena na upit'
                         else:
-                            D['price'] = 'Cijena na upit'.encode('utf-8')
+                            D['price'] = 'Cijena na upit'
                             
                         # Dodaj oglas u listu samo ako imamo osnovne podatke
                         if 'name' in D and 'title' in D:
@@ -175,22 +175,32 @@ with open('dump.pickle', 'wb') as fdump:
 
 # Generiraj RSS feed čak i ako nema oglasa
 def create_rss_item(x):
+    # Čisti tekst od HTML tagova i osiguraj da su svi stringovi
+    title = str(x['title']) if x['title'] else 'Bez naslova'
+    price = str(x['price']) if x['price'] else 'Cijena na upit'
+    description = str(x['text']) if x['text'] else 'Nema opisa'
+    link = str(x['href']) if x['href'] else 'https://www.njuskalo.hr'
+    
+    # Ukloni potencijalne problematične znakove
+    title = title.replace('\n', ' ').replace('\r', ' ').strip()
+    description = description.replace('\n', ' ').replace('\r', ' ').strip()
+    
     return PyRSS2Gen.RSSItem(
-        title=f"{x['title'].decode('utf-8')} [{x['price'].decode('utf-8')}]",
-        link=x['href'],
-        description=x['text'].decode('utf-8'),
-        guid=x['name'],
-        pubDate=x.get('datetime')
+        title=f"{title} [{price}]",
+        link=link,
+        description=description,
+        guid=PyRSS2Gen.Guid(str(x['name'])),
+        pubDate=x.get('datetime', datetime.datetime.now())
     )
 
 # Ako nema oglasa, stvorit ćemo placeholder
 if not L2:
     print("Nema oglasa, stvaram placeholder RSS")
     L2 = [{
-        'title': 'Nema novih oglasa'.encode('utf-8'),
-        'price': 'N/A'.encode('utf-8'),
+        'title': 'Nema novih oglasa',
+        'price': 'N/A',
         'href': 'https://www.njuskalo.hr/prodaja-kuca/krapinsko-zagorska',
-        'text': 'RSS feed je aktivan, ceka se pojavljivanje novih oglasa.'.encode('utf-8'),
+        'text': 'RSS feed je aktivan, ceka se pojavljivanje novih oglasa.',
         'name': 'placeholder',
         'datetime': datetime.datetime.now()
     }]
@@ -202,13 +212,14 @@ rss = PyRSS2Gen.RSS2(
     link=conf.get('rss', 'web_path'),
     description=conf.get('rss', 'description'),
     lastBuildDate=datetime.datetime.now(),
-    items=rssitems
+    items=rssitems,
+    language='hr'
 )
 
 # Spremi RSS datoteku
 output_path = conf.get('rss', 'file_path') + conf.get('rss', 'file_name')
 with open(output_path, 'w', encoding='utf-8') as f:
-    rss.write_xml(f)
+    rss.write_xml(f, encoding='utf-8')
 
 print(f"RSS feed generiran: {output_path}")
 print(f"Ukupno oglasa u feedu: {len(rssitems)}")
