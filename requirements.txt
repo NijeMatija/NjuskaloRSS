@@ -1,0 +1,6 @@
+html5lib==1.1
+PyRSS2Gen==1.1
+lxml==4.9.3
+requests==2.31.0
+configparser==6.0.0
+Flask==2.3.3 
