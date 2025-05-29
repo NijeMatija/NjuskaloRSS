@@ -98,9 +98,9 @@ if doc is not None:
             D = {
                 'name': f"oglas_{i}_{int(time.time())}",
                 'href': f"http://www.njuskalo.hr{link['href']}" if link['href'].startswith('/') else link['href'],
-                'title': link['text'].encode('utf-8') if link['text'] else b'Bez naslova',
-                'text': b'Opis nije dostupan',
-                'price': b'Cijena na upit',
+                'title': link['text'].encode('utf-8') if link['text'] else 'Bez naslova'.encode('utf-8'),
+                'text': 'Opis nije dostupan'.encode('utf-8'),
+                'price': 'Cijena na upit'.encode('utf-8'),
                 'time': time.time(),
                 'datetime': datetime.datetime.now()
             }
@@ -116,7 +116,7 @@ if doc is not None:
                         if tmp:
                             D['name'] = tmp[0].attrib.get('name', '')
                             D['href'] = "http://www.njuskalo.hr/" + tmp[0].attrib.get('href', '')
-                            D['title'] = tmp[0].text.encode('utf-8') if tmp[0].text else b'Nema naslova'
+                            D['title'] = tmp[0].text.encode('utf-8') if tmp[0].text else 'Nema naslova'.encode('utf-8')
                             D['time'] = time.time()
                             D['datetime'] = datetime.datetime.now()
                             
@@ -125,18 +125,18 @@ if doc is not None:
                         if tmp and tmp[0].text:
                             D['text'] = tmp[0].text.encode('utf-8').strip()
                         else:
-                            D['text'] = b'Nema opisa'
+                            D['text'] = 'Nema opisa'.encode('utf-8')
                             
                     if i.attrib.get('class') == 'entity-prices':
                         tmp = i.getchildren()
                         if tmp and tmp[0].getchildren():
                             price_elem = tmp[0].getchildren()[0].getchildren()
                             if price_elem:
-                                D['price'] = price_elem[0].text.encode('utf-8').strip() if price_elem[0].text else b'Cijena na upit'
+                                D['price'] = price_elem[0].text.encode('utf-8').strip() if price_elem[0].text else 'Cijena na upit'.encode('utf-8')
                             else:
-                                D['price'] = b'Cijena na upit'
+                                D['price'] = 'Cijena na upit'.encode('utf-8')
                         else:
-                            D['price'] = b'Cijena na upit'
+                            D['price'] = 'Cijena na upit'.encode('utf-8')
                             
                         # Dodaj oglas u listu samo ako imamo osnovne podatke
                         if 'name' in D and 'title' in D:
@@ -187,10 +187,10 @@ def create_rss_item(x):
 if not L2:
     print("Nema oglasa, stvaram placeholder RSS")
     L2 = [{
-        'title': b'Nema novih oglasa',
-        'price': b'N/A',
+        'title': 'Nema novih oglasa'.encode('utf-8'),
+        'price': 'N/A'.encode('utf-8'),
         'href': 'https://www.njuskalo.hr/prodaja-kuca/krapinsko-zagorska',
-        'text': b'RSS feed je aktivan, čeka se pojavljivanje novih oglasa.',
+        'text': 'RSS feed je aktivan, ceka se pojavljivanje novih oglasa.'.encode('utf-8'),
         'name': 'placeholder',
         'datetime': datetime.datetime.now()
     }]
