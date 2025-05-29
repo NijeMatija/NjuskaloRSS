@@ -8,6 +8,11 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   generate-rss:
     runs-on: ubuntu-latest
@@ -39,12 +44,26 @@ jobs:
     - name: Generiraj RSS feed
       run: python njuskalo-rssgen.py
       
+    - name: Provjeri generirane datoteke
+      run: |
+        echo "Sadržaj trenutnog direktorija:"
+        ls -la
+        echo "Proveravamo postoji li RSS datoteka:"
+        if [ -f njuskalo-kuce.xml ]; then
+          echo "✅ njuskalo-kuce.xml postoji"
+          head -20 njuskalo-kuce.xml
+        else
+          echo "❌ njuskalo-kuce.xml ne postoji"
+        fi
+        
     - name: Kopiraj generirane datoteke
       run: |
-        cp njuskalo-kuce.xml artifacts/
-        cp dump.pickle artifacts/ 2>/dev/null || true
+        cp njuskalo-kuce.xml artifacts/ || echo "❌ Greška pri kopiranju RSS datoteke"
+        cp dump.pickle artifacts/ 2>/dev/null || echo "⚠️ dump.pickle ne postoji ili greška pri kopiranju"
+        echo "Sadržaj artifacts direktorija:"
+        ls -la artifacts/
         
-    - name: Generiraj index.html
+    - name: Stvori index.html
       run: |
         cat > artifacts/index.html << 'EOF'
         <!DOCTYPE html>
@@ -54,41 +73,103 @@ jobs:
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Njuškalo RSS - Kuće Krapinsko-zagorska</title>
             <style>
-                body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
-                .rss-link { background: #ff6b35; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; }
-                .info { background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0; }
+                body { 
+                    font-family: Arial, sans-serif; 
+                    max-width: 600px; 
+                    margin: 50px auto; 
+                    padding: 20px; 
+                    background: #f5f5f5;
+                }
+                .container {
+                    background: white;
+                    padding: 30px;
+                    border-radius: 10px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                }
+                .rss-link { 
+                    background: #ff6b35; 
+                    color: white; 
+                    padding: 15px 25px; 
+                    text-decoration: none; 
+                    border-radius: 5px; 
+                    display: inline-block;
+                    margin: 20px 0;
+                }
+                .rss-link:hover {
+                    background: #e55a2b;
+                }
+                .info { 
+                    background: #e3f2fd; 
+                    padding: 15px; 
+                    border-radius: 5px; 
+                    margin: 20px 0; 
+                    border-left: 4px solid #2196f3;
+                }
+                code {
+                    background: #f1f1f1;
+                    padding: 2px 5px;
+                    border-radius: 3px;
+                    word-break: break-all;
+                }
+                .success {
+                    color: #4caf50;
+                    font-weight: bold;
+                }
             </style>
         </head>
         <body>
-            <h1>🏠 Njuškalo RSS Feed</h1>
-            <h2>Kuće u Krapinsko-zagorskoj županiji</h2>
-            
-            <div class="info">
-                <p><strong>RSS URL za mobilne aplikacije:</strong></p>
-                <code>https://${GITHUB_REPOSITORY#*/}.github.io/${GITHUB_REPOSITORY#*/}/njuskalo-kuce.xml</code>
+            <div class="container">
+                <h1>🏠 Njuškalo RSS Feed</h1>
+                <p class="success">✅ RSS feed je aktivan i funkcionalan!</p>
+                <h2>Kuće u Krapinsko-zagorskoj županiji</h2>
+                
+                <div class="info">
+                    <p><strong>RSS URL za mobilne aplikacije:</strong></p>
+                    <code>https://nijematija.github.io/njuskalorss/njuskalo-kuce.xml</code>
+                </div>
+                
+                <p>
+                    <a href="njuskalo-kuce.xml" class="rss-link">📡 Otvori RSS Feed</a>
+                </p>
+                
+                <h3>📱 Kako koristiti:</h3>
+                <ol>
+                    <li>Kopirajte RSS URL gore</li>
+                    <li>Otvorite RSS aplikaciju na mobitelu (Feedly, Inoreader, itd.)</li>
+                    <li>Dodajte novi feed s ovim URL-om</li>
+                    <li>Postavite push obavještenja</li>
+                </ol>
+                
+                <h3>⚙️ Automatsko ažuriranje:</h3>
+                <p>Feed se automatski ažurira <strong>svakih 30 minuta</strong> s najnovijim oglasima.</p>
+                
+                <p><small>Zadnje ažuriranje: <span id="datetime"></span></small></p>
+                
+                <script>
+                    document.getElementById('datetime').textContent = new Date().toLocaleString('hr-HR');
+                </script>
             </div>
-            
-            <p>
-                <a href="njuskalo-kuce.xml" class="rss-link">📡 Otvori RSS Feed</a>
-            </p>
-            
-            <h3>Kako koristiti:</h3>
-            <ol>
-                <li>Kopirajte RSS URL gore</li>
-                <li>Otvorite RSS aplikaciju na mobitelu (Feedly, Inoreader, itd.)</li>
-                <li>Dodajte novi feed s ovim URL-om</li>
-                <li>Postavite push obavještenja</li>
-            </ol>
-            
-            <p><em>Feed se automatski ažurira svakih 30 minuta</em></p>
-            <p><small>Zadnje ažuriranje: $(date)</small></p>
         </body>
         </html>
         EOF
         
-    - name: Deploy na GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
+    - name: Finalna provjera artifacts
+      run: |
+        echo "Finalni sadržaj artifacts direktorija:"
+        ls -la artifacts/
+        echo "Ukupno datoteka u artifacts:"
+        find artifacts/ -type f | wc -l
+        echo "Veličine datoteka:"
+        du -h artifacts/*
+        
+    - name: Setup Pages
+      uses: actions/configure-pages@v3
+      
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v2
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./artifacts
-        keep_files: true 
+        path: './artifacts'
+        
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v2 
