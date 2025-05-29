@@ -1,0 +1,94 @@
+name: Generiraj Njuškalo RSS Feed
+
+on:
+  schedule:
+    # Pokreni svakih 30 minuta
+    - cron: '*/30 * * * *'
+  workflow_dispatch: # Omogući ručno pokretanje
+  push:
+    branches: [ main ]
+
+jobs:
+  generate-rss:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout kod
+      uses: actions/checkout@v4
+      
+    - name: Postavi Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Instaliraj dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Stvori direktorij za artefakte ako ne postoji
+      run: mkdir -p artifacts
+      
+    - name: Učitaj postojeći dump.pickle
+      continue-on-error: true
+      run: |
+        if [ -f artifacts/dump.pickle ]; then
+          cp artifacts/dump.pickle .
+        fi
+        
+    - name: Generiraj RSS feed
+      run: python njuskalo-rssgen.py
+      
+    - name: Kopiraj generirane datoteke
+      run: |
+        cp njuskalo-kuce.xml artifacts/
+        cp dump.pickle artifacts/ 2>/dev/null || true
+        
+    - name: Generiraj index.html
+      run: |
+        cat > artifacts/index.html << 'EOF'
+        <!DOCTYPE html>
+        <html lang="hr">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Njuškalo RSS - Kuće Krapinsko-zagorska</title>
+            <style>
+                body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+                .rss-link { background: #ff6b35; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; }
+                .info { background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0; }
+            </style>
+        </head>
+        <body>
+            <h1>🏠 Njuškalo RSS Feed</h1>
+            <h2>Kuće u Krapinsko-zagorskoj županiji</h2>
+            
+            <div class="info">
+                <p><strong>RSS URL za mobilne aplikacije:</strong></p>
+                <code>https://${GITHUB_REPOSITORY#*/}.github.io/${GITHUB_REPOSITORY#*/}/njuskalo-kuce.xml</code>
+            </div>
+            
+            <p>
+                <a href="njuskalo-kuce.xml" class="rss-link">📡 Otvori RSS Feed</a>
+            </p>
+            
+            <h3>Kako koristiti:</h3>
+            <ol>
+                <li>Kopirajte RSS URL gore</li>
+                <li>Otvorite RSS aplikaciju na mobitelu (Feedly, Inoreader, itd.)</li>
+                <li>Dodajte novi feed s ovim URL-om</li>
+                <li>Postavite push obavještenja</li>
+            </ol>
+            
+            <p><em>Feed se automatski ažurira svakih 30 minuta</em></p>
+            <p><small>Zadnje ažuriranje: $(date)</small></p>
+        </body>
+        </html>
+        EOF
+        
+    - name: Deploy na GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./artifacts
+        keep_files: true 
